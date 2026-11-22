@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from database import init_db
@@ -16,11 +16,11 @@ init_db(app)
 
 
 class Data(BaseModel):
-    sourceCountry: Union[str, None] = (None,)
-    destinationCountry: Union[str, None] = (None,)
-    millisecond: Union[int, None] = (None,)
-    type: Union[str, None] = (None,)
-    weight: Union[int, None] = (None,)
+    sourceCountry: Union[str, None] = None
+    destinationCountry: Union[str, None] = None
+    millisecond: Union[int, None] = None
+    type: Union[str, None] = None
+    weight: Union[int, None] = None
     attackTime: Union[str, None] = None
 
 
@@ -30,8 +30,7 @@ async def data_scraper(url: str, headers: dict) -> Union[list, dict]:
     if response.status_code == 200:
         logging.info(f"Data scraped successfully: {response.json()[0][0]}")
         return response.json()[0]
-    else:
-        return response.status_code
+    raise HTTPException(status_code=502, detail=f"Upstream returned {response.status_code}")
 
 
 async def data_parser(data: dict) -> list:
@@ -61,14 +60,14 @@ async def get_data(limit: int) -> list:
     headers = {"Accept": "application/json"}
     data = await data_scraper(url, headers)
     parsed_data = await data_parser(data)
-    DataModel.create(**parsed_data.dict())
+    for item in parsed_data:
+        await DataModel.create(**item.model_dump())
     return parsed_data
 
 
 @app.get("/attacks")
-async def get_data() -> list:
-    attacks = await DataModel.get_or_none()
-    return attacks
+async def list_attacks() -> list:
+    return await DataModel.all()
 
 
 if __name__ == "__main__":

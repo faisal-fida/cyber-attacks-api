@@ -1,63 +1,66 @@
-# Real-time Cyber Attacks FastAPI DB
+# cyber-attacks-api
 
-This project is a FastAPI-based web application designed to scrape real-time cyber attack data from an external source, parse the data, and store it in a database using Tortoise ORM.
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Usage](#usage)
-- [Complexities](#complexities)
-- [Solutions](#solutions)
-- [Challenges](#challenges)
-- [License](#license)
-
-## Installation
-
-1. Clone the repository:
-
-```sh
-git clone https://github.com/faisal-fida/Real-time-Cyber-Attacks-FastAPI-DB.git
-cd Real-time-Cyber-Attacks-FastAPI-DB
-```
-
-2. Install the dependencies:
-
-```sh
-pip install -r requirements.txt
-```
-
-3. Create a `.env` file with the following content:
-
-```
-DB_URL=<your_database_url>
-```
-
-4. Run the application:
-
-```sh
-uvicorn main:app --reload
-```
-
-## Usage
-
-The application provides the following endpoints:
-
-1. `GET /` - Returns the status of the API.
-2. `GET /attacks/{limit}` - Fetches a limited number of real-time cyber attack data and stores it in the database.
-3. `GET /attacks` - Retrieves all stored cyber attack data from the database.
+A FastAPI service that fetches recent attacks from the Radware live threat map API, returns them as JSON and stores them in a database through Tortoise ORM.
 
 ## Features
 
-- **Asynchronous Data Scraping**: The project uses asynchronous programming to efficiently scrape data from an external API. This ensures non-blocking operations and better performance.
-- **Database Integration**: Utilizes Tortoise ORM to interact with the database, including initializing the database and defining data models.
-- **Data Parsing and Validation**: Uses Pydantic models to parse and validate the scraped data before storing it in the database.
-- **Efficient Scraping**: Implemented an asynchronous data scraper using the `httpx` library to handle multiple requests concurrently, reducing the time taken to fetch data.
-- **Database Initialization**: The `init_db` function in `database.py` sets up the database connection and registers the models, ensuring a seamless integration with the FastAPI application.
-- **Data Model Definition**: Defined a `DataModel` class in `models.py` using Tortoise ORM to represent the structure of the data being stored, ensuring data integrity and consistency.
-- **Error Handling**: Managing errors during data scraping, such as handling non-200 HTTP responses and network issues, required robust error handling mechanisms.
-- **Concurrency Management**: Ensuring that multiple asynchronous operations do not lead to race conditions or data corruption was a key challenge.
-- **Data Consistency**: Maintaining data consistency when parsing and storing large volumes of real-time data required careful design and validation.
+- `GET /` health check.
+- `GET /attacks/{limit}` fetches `limit` recent attacks from `livethreatmap.radware.com`, saves each one to the database and returns them.
+- `GET /attacks` returns all stored attacks.
+- Each record has source country, destination country, millisecond, type, weight and attack time.
+- Aerich migration for the `datamodel` table (PostgreSQL syntax).
+
+## Tech stack
+
+Python 3, FastAPI, Uvicorn, Tortoise ORM, Aerich, PostgreSQL, python-dotenv, requests.
+
+## Structure
+
+```
+main.py                    FastAPI app and routes
+database.py                Tortoise ORM config (reads DB_URL)
+models.py                  DataModel table
+migrations/models/         Aerich initial migration
+requirements.txt
+```
+
+## Setup
+
+Requirements: Python 3.9+, a PostgreSQL database.
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Create a `.env` file:
+
+| Variable | Purpose |
+|----------|---------|
+| `DB_URL` | Database connection string, for example `postgres://user:password@localhost:5432/attacks` |
+
+## Run
+
+```bash
+python main.py          # serves on http://0.0.0.0:8000 with reload
+```
+
+Tables are created on startup (`generate_schemas=True`).
+
+## Usage
+
+```bash
+curl http://localhost:8000/attacks/10   # fetch and store 10 attacks
+curl http://localhost:8000/attacks      # list stored attacks
+```
+
+## Limitations
+
+- Depends on an unofficial, undocumented Radware endpoint that may change or restrict access.
+- Fetching the same attacks twice stores duplicates (no de-duplication).
+- `GET /attacks` has no pagination.
+- No tests.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+MIT
